@@ -5,16 +5,14 @@ import java.util.ArrayList;
 
 public class Puzzle {
 
-    //TODO:
-        //1. Fix the printing of stats depending on what the solving method used is.
+    //COMMAND TO RUN: time java Puzzle `cat 4x4Puzzles/4x4.48.txt` -astar -stats
 
-        //5. turn the stats into function that can be called, where the paramter is the type of method used.
+
+
 
     //STATISTICS:
     public static int num_moves = 0;
-    public static int states_created = 0;
     public static int states_explored = 0;
-    public static int states_expanded = 0;
     public static int max_queue_size = 0;
 
     enum Direction {
@@ -26,15 +24,20 @@ public class Puzzle {
     }
 
     public static void print_stats(SearchStrategy s){
+
         System.out.println("Moves = " + num_moves);
-        System.out.println("States Created = " + states_created);
-        System.out.println("States Expanded = " + states_expanded);
         System.out.println("States explored = " + states_explored);
         if (s.equals(SearchStrategy.BFS)){
             System.out.println("Max queue size = " + max_queue_size);
         }
+        System.out.println("Branching Factor: " + String.format("%.3f", branching_factor()));
 
 
+
+    }
+
+    public static double branching_factor(){
+        return Math.pow(states_explored, 1.0 /(num_moves));
     }
 
 

@@ -76,6 +76,15 @@ public final class Board {
         return this.board;
     }
 
+
+    public int get_col(int index){
+        return index % this.cols;
+    }
+
+    public int get_row(int index){
+        return index / this.rows;
+    }
+
     private static boolean is_valid_board(int[] board) {
         boolean[] tiles = new boolean[board.length];
 

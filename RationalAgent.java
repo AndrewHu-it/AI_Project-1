@@ -6,6 +6,12 @@ import java.util.*;
 
 public class RationalAgent {
 
+    //TODO: Add some additional Heuristics (linear conflicts works well)
+    //Getting the branching factor down even just a tiny bit makes a huge difference
+    //subtracting two from the exponent would be nice.
+    //first going to cache the board states, that is easy.
+
+
     private Board goalState;
     private Board initialState;
     private Puzzle.SearchStrategy strategy;
@@ -14,10 +20,17 @@ public class RationalAgent {
     HashMap<Board, Node> visited = new HashMap<Board, Node>();
 
 
+    HashMap<Integer,Integer> cached_tile_positions = new HashMap<Integer,Integer>();
+    HashMap<Board,Integer> cached_boards = new HashMap<Board,Integer>();
+    private HashSet<Board> visited_cached_boards = new HashSet<>();
+
+
     public RationalAgent(Board initialState, Board goalState, Puzzle.SearchStrategy strategy){
         this.goalState = goalState;
         this.initialState = initialState;
         this.strategy = strategy;
+        cache_tile_positions();
+        cache_board_states();
     }
 
     public RationalAgent(Board initialState, Board goalState, Puzzle.SearchStrategy strategy, int depth){
@@ -25,6 +38,43 @@ public class RationalAgent {
         this.initialState = initialState;
         this.strategy = strategy;
         this.max_depth = depth;
+        cache_tile_positions();
+        cache_board_states();
+    }
+
+    private void cache_tile_positions() {
+        int[] goalBoard = goalState.get_board();
+        for (int i = 0; i < goalBoard.length; i++) {
+            int tileValue = goalBoard[i];
+            cached_tile_positions.put(tileValue, i);
+        }
+    }
+
+    private void cache_board_states(){
+       cache_board_states(0,6, goalState);
+    }
+
+    private void cache_board_states(int current_depth, int max_depth, Board board) {
+        if (current_depth > max_depth) {
+            return;
+        }
+
+        Integer existing_depth = cached_boards.get(board);
+        if (existing_depth == null || current_depth < existing_depth) {
+            cached_boards.put(board, current_depth);
+        } else {
+            return;
+        }
+        if (visited_cached_boards.contains(board)) {
+            return;
+        }
+        visited_cached_boards.add(board);
+
+        for (Puzzle.Direction direction : board.valid_moves()) {
+            Board new_board = board.move(direction);
+            cache_board_states(current_depth + 1, max_depth, new_board);
+        }
+
     }
 
 
@@ -58,23 +108,15 @@ public class RationalAgent {
 
 
 
-
-    //With Dijkstras we will not have the problem of finding a more optimal path to a particular node..... will we get that problem with A* and/or GBFS? Seems likely.
-        //If this is the case, we want to keep the hashmap so that we can figure out the cost of the node that we have just run into.
-        //I dont think I need the explored Hashset if I am already using a hashmap to figure out what I have seen already
-            //Try to code it wihtout after I get it working.
-
     public Node search(Puzzle.SearchStrategy strategy){
 
-        Comparator<Node> comparator; // I figured this would be easier than implemented comparable in node.
+        //Comparator I think is easier
+        Comparator<Node> comparator;
 
-
-        //parameters -> expression
-
-        //TODO: make sure this lambda stuff works as I intend. Trying to get the one with the minimum
+        //Lambda: parameters -> expression, :: reference method
         switch (strategy) {
             case UCS: //g(n)
-                comparator = Comparator.comparingInt(Node::getCost); // should reference the method getCost in the node board.
+                comparator = Comparator.comparingInt(Node::getCost);
                 break;
             case GBFS: //h(n)
                 comparator = Comparator.comparingInt(n -> heuristic(n.getBoard()));
@@ -83,49 +125,39 @@ public class RationalAgent {
                 comparator = Comparator.comparingInt(n -> n.getCost() + heuristic(n.getBoard()));
                 break;
             default:
-                throw new IllegalArgumentException("Unknown strategy: " + strategy);
+                throw new IllegalArgumentException("Not a valid Strategy: " + strategy);
         }
 
         PriorityQueue<Node> frontier = new PriorityQueue<>(comparator);
         Set<Board> explored = new HashSet<>();
 
-
-
-        //manhattan distance - distance mepty square moves
-
-
-        //cache the goal stuff so that we do not have to recompute it every time.
-
-
-
         Node start_node = new Node(initialState,null,null, 0); //have to pass in cost
         frontier.add(start_node);
         visited.put(initialState,start_node);
+        Puzzle.states_explored++;
 
         while (!frontier.isEmpty()){
             Node current = frontier.poll();
+
             if (goalTest(current.getBoard())){
                 return current;
             }
-
-
 
             if (explored.contains(current.getBoard())){
                 continue;
             }
             explored.add(current.getBoard());
+            Puzzle.states_explored++;
 
             for (Puzzle.Direction direction : current.getBoard().valid_moves()){
                 Board next_board = current.getBoard().move(direction);
                 int next_cost = current.getCost() +1;
-                //maybe the next_cost should be g(n) + h(n)? Not just the level?
 
                 if (explored.contains(next_board)){
                     continue;
                 }
-
+                //Include this check to see if we have a better way to get to the node (GBFS), not optimal path.
                 Node already_seen_node = visited.get(next_board);
-
 
                 if (already_seen_node == null || next_cost < already_seen_node.getCost()){
                     Node new_node = new Node(next_board,current,direction, next_cost);
@@ -141,7 +173,7 @@ public class RationalAgent {
 
 
 
-    //For Debgging
+    //Mostly For debugging
     public int compute_cost(Node node){
         switch (strategy) {
             case UCS: //g(n)
@@ -156,32 +188,112 @@ public class RationalAgent {
     }
 
 
-    //linear conflicts: thingso ut of order to make a goal state
-    //starting at the end state and saving all of the boards that are for example 4 away.
-
-
-
-
-    //Work on this Heuristic, don't think it is correct.
-    //TOD Include a parameter to change what the Heuristic is.
-    //TODO: Review this heuristic stuff
     public int heuristic(Board board) {
-        int heuristic = 0;
+        int manhattan = manhattan_distance(board);
+        int linearConflict = linear_conflict(board);
+
+
+            //The manhattan distance and the cached board literially always return the same value. Not sure why .
+//            if (cached_boards(board) != 0){
+//                System.out.println("linear conflict:   " + linear_conflict(board) + ",    cached Board: " + cached_boards(board) + ",      manhattan distance: " + manhattan_distance(board) );
+//            }
+
+        return Math.max(manhattan + 2 * linearConflict, cached_boards(board));
+    }
+
+
+    //TODO Verify that this working correctly.
+    public int linear_conflict(Board board) {
+        int linearConflict = 0;
+        int size = board.get_rows();
         int[] board_array = board.get_board();
-        int[] goal_array = this.goalState.get_board();
         int cols = board.get_cols();
 
-        for (int i = 0; i < board_array.length; i++) {
+        for (int row = 0; row < size; row++) {
+            List<Integer> tilesInRow = new ArrayList<>();
+            for (int col = 0; col < cols; col++) {
+                int index = row * cols + col;
+                int tile = board_array[index];
+                if (tile != 0) {
+                    int goalRow = getGoalRow(tile);
+                    if (goalRow == row) {
+                        tilesInRow.add(tile);
+                    }
+                }
+            }
+            linearConflict += countConflicts(tilesInRow, true);
+        }
+
+        for (int col = 0; col < cols; col++) {
+            List<Integer> tilesInCol = new ArrayList<>();
+            for (int row = 0; row < size; row++) {
+                int index = row * cols + col;
+                int tile = board_array[index];
+                if (tile != 0) {
+                    int goalCol = getGoalCol(tile);
+                    if (goalCol == col) {
+                        tilesInCol.add(tile);
+                    }
+                }
+            }
+            linearConflict += countConflicts(tilesInCol, false);
+        }
+
+        return linearConflict;
+    }
+
+
+    private int countConflicts(List<Integer> tiles, boolean isRow) {
+        int conflicts = 0;
+        for (int i = 0; i < tiles.size(); i++) {
+            int tileA = tiles.get(i);
+            int goalPosA = isRow ? getGoalCol(tileA) : getGoalRow(tileA);
+            for (int j = i + 1; j < tiles.size(); j++) {
+                int tileB = tiles.get(j);
+                int goalPosB = isRow ? getGoalCol(tileB) : getGoalRow(tileB);
+                if (goalPosA > goalPosB) {
+                    conflicts++;
+                }
+            }
+        }
+        return conflicts;
+    }
+
+
+    private int getGoalRow(int tile) {
+        int goalIndex = cached_tile_positions.get(tile);
+        return goalIndex / goalState.get_cols();
+    }
+
+    private int getGoalCol(int tile) {
+        int goalIndex = cached_tile_positions.get(tile);
+        return goalIndex % goalState.get_cols();
+    }
+
+
+    public int cached_boards(Board board){
+        if (cached_boards.containsKey(board)){
+            return cached_boards.get(board);
+        }
+        return 0;
+    }
+
+
+    public int manhattan_distance(Board board){
+        int heuristic = 0;
+        int[] board_array = board.get_board();
+
+        for (int i = 0; i < initialState.get_board().length; i ++){
             int tile = board_array[i];
-            if (tile != 0) {
-                int goalIndex = indexOf(goal_array, tile);
-                int currentRow = i / cols;
-                int currentCol = i % cols;
+            if (tile != 0){
+                int goal_index = cached_tile_positions.get(tile);
+                int goal_row = goalState.get_row(goal_index);
+                int goal_col= goalState.get_col(goal_index);
 
-                int goalRow = goalIndex / cols;
-                int goalCol = goalIndex % cols;
+                int current_row = board.get_row(i);
+                int current_col = board.get_col(i);
 
-                heuristic += Math.abs(currentRow - goalRow) + Math.abs(currentCol - goalCol);
+                heuristic += Math.abs(current_row - goal_row) + Math.abs(current_col - goal_col);
             }
         }
         return heuristic;
@@ -216,11 +328,9 @@ public class RationalAgent {
             }
 
             for (Puzzle.Direction direction : current.getBoard().valid_moves()) {
-                Puzzle.states_expanded ++; //<<<STATS: WE ARE EXPANDING THE STATE>>>
                 Board newBoard = current.getBoard().move(direction);
                 if (!visited.containsKey(newBoard)) {
                     Node newNode = new Node(newBoard, current, direction);
-                    Puzzle.states_created ++; //<<<STATS: WE ARE CREATING A NEW NODE HERE>>>
                     visited.put(newBoard, newNode);
                     queue.add(newNode);
                 }
@@ -236,7 +346,6 @@ public class RationalAgent {
         this.max_depth = Integer.MAX_VALUE;
         return DLS(node, Integer.MAX_VALUE);
     }
-
 
 
     private Node DLS (){
@@ -256,14 +365,12 @@ public class RationalAgent {
             visited.put(currentBoard, node);
         }
 
-        Puzzle.states_expanded ++;
         for (Puzzle.Direction direction : currentBoard.valid_moves()) {
             Board newBoard = currentBoard.move(direction);
 
 
             if (!visited.containsKey(newBoard)) {
                 Node nextNode = new Node(newBoard, node, direction,current_depth);
-                Puzzle.states_created ++;
                 Node result = DLS(nextNode, limit - 1 );
                 Puzzle.states_explored ++;
                 if (result != null) {
@@ -273,7 +380,7 @@ public class RationalAgent {
 
                 Node old_node = visited.get(newBoard);
                 int old_cost = old_node.getCost();
-                if (old_node.getCost() > current_depth){ //this implies that we found a way to get to the node quicker, at which point we want to update it and explore it.
+                if (old_node.getCost() > current_depth){
                     old_node.set_cost(current_depth);
                     old_node.set_lastMove(direction);
                     old_node.set_parent(node);
@@ -305,9 +412,6 @@ public class RationalAgent {
             limit++;
         }
     }
-
-
-
 
 
 
