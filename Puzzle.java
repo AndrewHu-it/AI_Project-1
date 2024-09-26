@@ -9,7 +9,6 @@ public class Puzzle {
 
 
 
-
     //STATISTICS:
     public static int num_moves = 0;
     public static int states_explored = 0;
@@ -31,8 +30,6 @@ public class Puzzle {
             System.out.println("Max queue size = " + max_queue_size);
         }
         System.out.println("Branching Factor: " + String.format("%.3f", branching_factor()));
-
-
 
     }
 
@@ -75,7 +72,7 @@ public class Puzzle {
                 case "LEFT": moves.add(Direction.LEFT); continue outerLoop;
                 case "RIGHT": moves.add(Direction.RIGHT); continue outerLoop;
 
-                //Solving strategy (set others to false, this way the strategy is the last one they enter)
+                //Solving strategy
                 case "-bfs": searchStrategy = SearchStrategy.BFS; continue outerLoop;
                 case "-dfs": searchStrategy = SearchStrategy.DFS; continue outerLoop;
                 case "-dls": searchStrategy = SearchStrategy.DLS; continue outerLoop;
@@ -84,12 +81,7 @@ public class Puzzle {
                 case "-gbfs": searchStrategy = SearchStrategy.GBFS; continue outerLoop;
                 case "-astar": searchStrategy = SearchStrategy.ASTAR; continue outerLoop;
 
-
-                //TODO: May want to add additional paramteres for different searching.
-
-
-
-
+                //Reading in tiles
                 default:
                     try{
                         if (arg.equals(".")){
@@ -109,12 +101,8 @@ public class Puzzle {
         }
 
         try{
-
-
-            //Initial State
             Board board = new Board(rows, columns, board_nums);
 
-            //Goal State
             int[] goal_board = new int[rows*columns];
             if (Board.top_left_to_Win){
                 goal_board[0] = 0;
@@ -128,24 +116,18 @@ public class Puzzle {
                 }
             }
 
-
             Board goal_state = new Board(rows, columns, goal_board);
             RationalAgent agent = new RationalAgent(board,goal_state,searchStrategy, DLS_limit);
 
-
-            //For some reason it is not catching the stack overflow error.
             try {
                 moves = agent.solve();
                 if (moves == null){
                     System.out.println("No solution");
                     System.exit(0);
-                    //terminate program
                 }
             }catch(Exception e){
                 System.out.println(e.getMessage());
             }
-
-
 
             if (verbose){
                 board.print();
@@ -165,8 +147,6 @@ public class Puzzle {
                 System.out.println("\nNot Solved");
             }
 
-            //TODO: The stats metrics would be different depending on the type of strategy used to solve the puzzle.
-                //--DFS and BFS would not both have queue, for instance.
             if (stats){
                 print_stats(searchStrategy);
             }
@@ -174,7 +154,5 @@ public class Puzzle {
         } catch (Exception e){
             System.out.println(e.getMessage());
         }
-
-
     }
 }

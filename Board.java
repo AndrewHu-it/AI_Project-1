@@ -6,7 +6,7 @@ import java.util.Arrays;
 
 public final class Board {
 
-    //make 9 static arrays, and return them for the possible directions
+    //9 static arrays, and return them for the possible directions
     private static Puzzle.Direction[] upper_left = {Puzzle.Direction.DOWN, Puzzle.Direction.RIGHT};
     private static Puzzle.Direction[] upper_right = {Puzzle.Direction.DOWN, Puzzle.Direction.LEFT};
     private static Puzzle.Direction[] upper_middle = {Puzzle.Direction.DOWN, Puzzle.Direction.LEFT, Puzzle.Direction.RIGHT};
@@ -140,20 +140,16 @@ public final class Board {
 
         int empty_spot = this.empty_index + 1;
 
-        //on the top row: can't move up
         if (empty_spot > 0 && empty_spot <= cols ){
             top = true;
         }
-        // on the bottom row: can't move down
         if (empty_spot > (rows - 1)*cols){
             bottom = true;
 
         }
-        // on the right side:
         if ((empty_spot % cols) == 0){
             right = true;
         }
-        //  on the left side
         if ((empty_spot % cols) == 1){
             left = true;
         }
@@ -203,7 +199,6 @@ public final class Board {
         int new_empty_index = -1;
         int[] new_board = Arrays.copyOf(this.board, this.board.length);
 
-        //Right
         switch (direction){
             case RIGHT:
                  new_empty_index = this.empty_index + 1;
@@ -211,7 +206,7 @@ public final class Board {
                  new_board[this.empty_index] = t1;
                  new_board[new_empty_index] = 0;
                  break;
-            case LEFT: //switch this one with the original -1
+            case LEFT:
                 new_empty_index = this.empty_index -1;
                 int t2 = new_board[new_empty_index];
                 new_board[this.empty_index] = t2;
@@ -267,9 +262,6 @@ public final class Board {
         return hash;
 
     }
-
-
-
 
 
     public void print() {

@@ -6,22 +6,17 @@ import java.util.*;
 
 public class RationalAgent {
 
-    //TODO: Add some additional Heuristics (linear conflicts works well)
-    //Getting the branching factor down even just a tiny bit makes a huge difference
-    //subtracting two from the exponent would be nice.
-    //first going to cache the board states, that is easy.
-
 
     private Board goalState;
     private Board initialState;
     private Puzzle.SearchStrategy strategy;
     private int max_depth;
 
-    HashMap<Board, Node> visited = new HashMap<Board, Node>();
+    private HashMap<Board, Node> visited = new HashMap<Board, Node>();
 
 
-    HashMap<Integer,Integer> cached_tile_positions = new HashMap<Integer,Integer>();
-    HashMap<Board,Integer> cached_boards = new HashMap<Board,Integer>();
+    private HashMap<Integer,Integer> cached_tile_positions = new HashMap<Integer,Integer>();
+    private HashMap<Board,Integer> cached_boards = new HashMap<Board,Integer>();
     private HashSet<Board> visited_cached_boards = new HashSet<>();
 
 
@@ -108,7 +103,7 @@ public class RationalAgent {
 
 
 
-    public Node search(Puzzle.SearchStrategy strategy){
+    private Node search(Puzzle.SearchStrategy strategy){
 
         //Comparator I think is easier
         Comparator<Node> comparator;
@@ -156,7 +151,6 @@ public class RationalAgent {
                 if (explored.contains(next_board)){
                     continue;
                 }
-                //Include this check to see if we have a better way to get to the node (GBFS), not optimal path.
                 Node already_seen_node = visited.get(next_board);
 
                 if (already_seen_node == null || next_cost < already_seen_node.getCost()){
@@ -174,7 +168,7 @@ public class RationalAgent {
 
 
     //Mostly For debugging
-    public int compute_cost(Node node){
+    private int compute_cost(Node node){
         switch (strategy) {
             case UCS: //g(n)
                 return node.getCost();
@@ -187,77 +181,88 @@ public class RationalAgent {
         }
     }
 
-
-    public int heuristic(Board board) {
+    //The manhattan distance and the cached board literally always return the same value. Not sure why .
+    private int heuristic(Board board) {
         int manhattan = manhattan_distance(board);
         int linearConflict = linear_conflict(board);
-
-
-            //The manhattan distance and the cached board literially always return the same value. Not sure why .
-//            if (cached_boards(board) != 0){
-//                System.out.println("linear conflict:   " + linear_conflict(board) + ",    cached Board: " + cached_boards(board) + ",      manhattan distance: " + manhattan_distance(board) );
-//            }
-
         return Math.max(manhattan + 2 * linearConflict, cached_boards(board));
     }
 
 
-    //TODO Verify that this working correctly.
-    public int linear_conflict(Board board) {
-        int linearConflict = 0;
+    // 0, 2, 1.
+    //Linear conflict, not so easy to just switch the two around.
+    //Correct row or correct col but out of order, how many tiles needed to be removed to have no linear conflicts?
+    private int linear_conflict(Board board) {
+        int linear_conflict = 0;
         int size = board.get_rows();
         int[] board_array = board.get_board();
         int cols = board.get_cols();
 
+        //Rows
         for (int row = 0; row < size; row++) {
-            List<Integer> tilesInRow = new ArrayList<>();
+            List<Integer> tiles_in_row = new ArrayList<>();
             for (int col = 0; col < cols; col++) {
                 int index = row * cols + col;
                 int tile = board_array[index];
                 if (tile != 0) {
-                    int goalRow = getGoalRow(tile);
-                    if (goalRow == row) {
-                        tilesInRow.add(tile);
+                    int goal_row = getGoalRow(tile);
+                    if (goal_row == row) {
+                        tiles_in_row.add(tile);
                     }
                 }
             }
-            linearConflict += countConflicts(tilesInRow, true);
+            linear_conflict += count_conflicts(tiles_in_row, true);
         }
 
+        //Cols
         for (int col = 0; col < cols; col++) {
-            List<Integer> tilesInCol = new ArrayList<>();
+            List<Integer> tiles_in_col = new ArrayList<>();
             for (int row = 0; row < size; row++) {
                 int index = row * cols + col;
                 int tile = board_array[index];
                 if (tile != 0) {
-                    int goalCol = getGoalCol(tile);
-                    if (goalCol == col) {
-                        tilesInCol.add(tile);
+                    int goal_col = getGoalCol(tile);
+                    if (goal_col == col) {
+                        tiles_in_col.add(tile);
                     }
                 }
             }
-            linearConflict += countConflicts(tilesInCol, false);
+            linear_conflict += count_conflicts(tiles_in_col, false);
         }
 
-        return linearConflict;
+        return linear_conflict;
     }
 
 
-    private int countConflicts(List<Integer> tiles, boolean isRow) {
+    private int count_conflicts(List<Integer> tiles, boolean is_row) {
         int conflicts = 0;
         for (int i = 0; i < tiles.size(); i++) {
-            int tileA = tiles.get(i);
-            int goalPosA = isRow ? getGoalCol(tileA) : getGoalRow(tileA);
+            int tile_a = tiles.get(i);
+            int goal_pos_a;
+            if (is_row) {
+                goal_pos_a = getGoalCol(tile_a);
+            } else {
+                goal_pos_a = getGoalRow(tile_a);
+            }
+
             for (int j = i + 1; j < tiles.size(); j++) {
-                int tileB = tiles.get(j);
-                int goalPosB = isRow ? getGoalCol(tileB) : getGoalRow(tileB);
-                if (goalPosA > goalPosB) {
+                int tile_b = tiles.get(j);
+                int goal_pos_b;
+                if (is_row) {
+                    goal_pos_b = getGoalCol(tile_b);
+                } else {
+                    goal_pos_b = getGoalRow(tile_b);
+                }
+
+                if (goal_pos_a > goal_pos_b) {
                     conflicts++;
                 }
             }
         }
         return conflicts;
     }
+
+
 
 
     private int getGoalRow(int tile) {
@@ -271,7 +276,7 @@ public class RationalAgent {
     }
 
 
-    public int cached_boards(Board board){
+    private int cached_boards(Board board){
         if (cached_boards.containsKey(board)){
             return cached_boards.get(board);
         }
@@ -279,7 +284,7 @@ public class RationalAgent {
     }
 
 
-    public int manhattan_distance(Board board){
+    private int manhattan_distance(Board board){
         int heuristic = 0;
         int[] board_array = board.get_board();
 
@@ -367,7 +372,6 @@ public class RationalAgent {
 
         for (Puzzle.Direction direction : currentBoard.valid_moves()) {
             Board newBoard = currentBoard.move(direction);
-
 
             if (!visited.containsKey(newBoard)) {
                 Node nextNode = new Node(newBoard, node, direction,current_depth);

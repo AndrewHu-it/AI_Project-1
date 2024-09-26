@@ -11,14 +11,6 @@ public class Node {
     private Puzzle.Direction lastMove;
     private int cost;
 
-    //Should the Node cost be the thing that the dijkstras runs off of.
-    //value of node method node --> value
-
-    //create their different methods, one for each of the algorithms.
-
-
-
-
     public Node (Board board, Node parent, Puzzle.Direction lastMove){
         this.board = board;
         this.parent = parent;
@@ -40,7 +32,6 @@ public class Node {
     }
 
 
-    //Need to use these to update the parameters.
     public void set_parent(Node parent){
         this.parent = parent;
     }
@@ -60,6 +51,7 @@ public class Node {
     public void increment_cost(){
         this.cost += 1;
     }
+
     public void increment_cost(int cost){
         this.cost += cost;
     }
@@ -67,8 +59,8 @@ public class Node {
 
     @Override
     public boolean equals(Object other) {
-        if (this == other) return true; // Same reference check
-        if (!(other instanceof Node)) return false; // Type check
+        if (this == other) return true;
+        if (!(other instanceof Node)) return false;
         Node other_node = (Node) other;
         return this.board.equals(other_node.board) && this.cost == other_node.cost && this.parent.equals(other_node.parent);
     }
@@ -80,7 +72,6 @@ public class Node {
 
 
     public ArrayList<Puzzle.Direction> backtrack(){
-
         ArrayList<Puzzle.Direction> sequence = new ArrayList<>();
         Stack<Puzzle.Direction> reverse_sequence = new Stack<>();
 
