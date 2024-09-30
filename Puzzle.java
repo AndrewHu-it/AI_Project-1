@@ -47,7 +47,7 @@ public class Puzzle {
         boolean verbose = false;
         ArrayList<Direction> moves = new ArrayList<>();
 
-        SearchStrategy searchStrategy = SearchStrategy.BFS;
+        SearchStrategy searchStrategy = SearchStrategy.ASTAR;
         int DLS_limit = 25;
 
 

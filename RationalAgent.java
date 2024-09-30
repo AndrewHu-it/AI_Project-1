@@ -284,7 +284,10 @@ public class RationalAgent {
     }
 
 
+
+
     private int manhattan_distance(Board board){
+
         int heuristic = 0;
         int[] board_array = board.get_board();
 
