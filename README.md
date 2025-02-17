@@ -40,6 +40,9 @@ n       _n is an integer between 1 and board size -1. <br>_
 **Commands to run preset sizes:** <br> 
 time java Puzzle `cat 4x4Puzzles/4x4.<depth #>.txt` -astar -stats <br>
 EX: time java Puzzle `cat 4x4Puzzles/4x4.48.txt` -astar -stats <br>
+EX: java Puzzle $(cat 4x4Puzzles/4x4.10.txt)
+
+
 
 
 
